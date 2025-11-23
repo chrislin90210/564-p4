@@ -17,19 +17,31 @@ const Status createHeapFile(const string fileName)
     {
 		// file doesn't exist. First create it and allocate
 		// an empty header page and data page.
+	status = db.createFile(fileName);
+	if (status != OK) { return status; }	
+	
+	// Initialize file pointer
+	status =  db.openFile(fileName, file);
+	if (status != OK) { return status; }	
+
+	status = bufMgr->allocPage(file, hdrPageNo, newPage);
+	if (status != OK) { return status; }
 		
+	hdrPage = (FileHdrPage*)newPage; 		
+	strncpy(hdrPage->fileName, fileName.c_str(), 49);
+	hdrPage->fileName[49] = '\0';
+	hdrPage->recCnt = 0;
+	hdrPage->pageCnt = 1;
 		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
+	status = bufMgr->allocPage(file, newPageNo, newPage);
+	if (status != OK) { return status; }
+	newPage->init(newPageNo);
+	hdrPage->firstPage = newPageNo;
+	hdrPage->lastPage = newPageNo;
+	
+	bufMgr->unPinPage(file, newPageNo, true);
+	bufMgr->unPinPage(file, hdrPageNo, true);
+	return status;	
     }
     return (FILEEXISTS);
 }
