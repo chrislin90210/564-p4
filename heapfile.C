@@ -39,8 +39,8 @@ const Status createHeapFile(const string fileName)
 	hdrPage->firstPage = newPageNo;
 	hdrPage->lastPage = newPageNo;
 	
-	bufMgr->unPinPage(file, newPageNo, true);
-	bufMgr->unPinPage(file, hdrPageNo, true);
+	status = bufMgr->unPinPage(file, newPageNo, true);
+	status = bufMgr->unPinPage(file, hdrPageNo, true);
 	return status;	
     }
     return (FILEEXISTS);
