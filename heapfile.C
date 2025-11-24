@@ -372,10 +372,47 @@ const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
         // will never fit on a page, so don't even bother looking
         return INVALIDRECLEN;
     }
+	
+	if (currPage == NULL) {
+		currPageNo = headerPage->lastPage;
+		status = bufMgr->readPage(filePtr, currPageNo, currPage);
+		if (status != OK)
+			return status;
+		status = curPage->insertRecord(rec, rid);
+		if (status != OK) {
+			//insert failedcreate new page
+		
+			status = bufMgr->allocPage(filePtr, newPageNo, newPage);
+			if (status != OK) 
+				return status;
 
+			status = currPage->insertRecord(rec, rid);	
+			if 	(status != OK)
+				return status;
+			unpinstatus = bufMgr->unPinPage(filePtr, currPageNo, true);
+
+		}
+
+		hdrDirtyFlag = 1;
+		recCnt += 1;
+		curDirtyFlag = 1;
+		curRec = rid
+		return status;
+	}
+
+	status = currPage->insertRecord(rec, rid);	
+	
+	if (status == OK) {
+		hdrDirtyFlag = 1;
+		recCnt += 1;
+		curDirtyFlag = 1;
+		curRec = rid
+		unpinstatus = bufMgr->unPinPage(filePtr, currPageNo, true);
+
+	}	
   
-  
-  
+	return status; 
+	  
   
   
   
