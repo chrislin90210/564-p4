@@ -511,7 +511,7 @@ const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
 			headerPage->recCnt += 1;
 			curDirtyFlag = 1;
 			curRec = rid;
-
+			outRid = rid;
 			return status;
 		}
 		
@@ -559,6 +559,7 @@ const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
 		headerPage->recCnt += 1;
 		curDirtyFlag = 1;
 		curRec = rid;
+		outRid = rid;
 		return status;
 	}
 
