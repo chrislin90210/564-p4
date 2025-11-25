@@ -478,8 +478,6 @@ InsertFileScan::~InsertFileScan()
         if (status != OK) cerr << "error in unpin of data page\n";
     }
 }
-
-// Insert a record into the file
 const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
 {
     Page*	newPage;
@@ -512,6 +510,7 @@ const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
 			curDirtyFlag = 1;
 			curRec = rid;
 			outRid = rid;
+
 			return status;
 		}
 		
@@ -542,7 +541,7 @@ const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
 		
 		old->setNextPage(newPageNo);
 		headerPage->pageCnt += 1;
-		unpinstatus = bufMgr->unPinPage(filePtr, headerPage->lastPage, false);
+		unpinstatus = bufMgr->unPinPage(filePtr, headerPage->lastPage, true);
 
 		headerPage->lastPage = newPageNo;
 		hdrDirtyFlag = 1;
@@ -555,12 +554,12 @@ const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
 		}
 
 
-
 		headerPage->recCnt += 1;
 		curDirtyFlag = 1;
 		curRec = rid;
 		outRid = rid;
 		return status;
 	}
+
 
 
