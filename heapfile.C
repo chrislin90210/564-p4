@@ -484,8 +484,9 @@ const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
 {
     Page*	newPage;
     int		newPageNo;
-    Status	status, unpinstatus;
+    Status	status, unpinstatus, status2;
     RID		rid;
+	
 
     // check for very large records
     if ((unsigned int) rec.length > PAGESIZE-DPFIXED)
@@ -496,35 +497,52 @@ const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
 	
 	if (curPage == NULL) {
 		curPageNo = headerPage->lastPage;
+
 		status = bufMgr->readPage(filePtr, curPageNo, curPage);
 		if (status != OK) {
 			return status;
 		}
-		unpinstatus = bufMgr->unPinPage(filePtr, curPageNo, false);
+	
 		status = curPage->insertRecord(rec, rid);
-		if (status != OK) {
-			//insert failed alloc
+		if (status == OK) {
+
+			hdrDirtyFlag = 1;
+			headerPage->recCnt += 1;
+			curDirtyFlag = 1;
+			curRec = rid;
+
 			unpinstatus = bufMgr->unPinPage(filePtr, curPageNo, false);
+			curPage = NULL;
+			return status;
+		}
 		
-			status = bufMgr->allocPage(filePtr, newPageNo, newPage);
-			if (status != OK)  {
-				std::cout << "couldn't alloc new page";
-				return status;
-			}
+		unpinstatus = bufMgr->unPinPage(filePtr, curPageNo, false);
 
-			newPage->init(newPageNo);
+		status = bufMgr->allocPage(filePtr, newPageNo, newPage);
+		if (status != OK)  {
+			return status;
+		}
 
-			//curPage is still lastPage, append to LL
-			curPage->setNextPage(newPageNo);
-			curPage = newPage;
-			curPageNo = newPageNo;
-			headerPage->lastPage = newPageNo;
-			status = curPage->insertRecord(rec, rid);	
+		newPage->init(newPageNo);
 
-			if 	(status != OK)
-				return status;
+		Page *old;
+		status2 = bufMgr->readPage(filePtr, headerPage->lastPage, old);
+		
+		if (status2 != OK)
+			return status2;
+		
+		curPage->setNextPage(newPageNo);
+		unpinstatus = bufMgr->unPinPage(filePtr, headerPage->lastPage, true);
 
-		} 
+		curPage = newPage;
+		curPageNo = newPageNo;
+		headerPage->lastPage = newPageNo;
+		status = curPage->insertRecord(rec, rid);	
+
+
+		if 	(status != OK)
+			return status;
+
 
 		unpinstatus = bufMgr->unPinPage(filePtr, curPageNo, true);
 
@@ -543,51 +561,48 @@ const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
 		curDirtyFlag = 1;
 		curRec = rid;
 		unpinstatus = bufMgr->unPinPage(filePtr, curPageNo, true);
+		return status;
+	} 
 
-	} else {
-		unpinstatus = bufMgr->unPinPage(filePtr, curPageNo, true);
-		status = bufMgr->allocPage(filePtr, newPageNo, newPage);
-		newPage->init(newPageNo);
-		if (status != OK) 
-			return status;
+	unpinstatus = bufMgr->unPinPage(filePtr, curPageNo, true);
+	status = bufMgr->allocPage(filePtr, newPageNo, newPage);
 
-		status = newPage->insertRecord(rec, rid);	
-		unpinstatus = bufMgr->unPinPage(filePtr, curPageNo, true);
-		if 	(status != OK)
-			return status;
+	if (status != OK) 
+		return status;
 
-		curPageNo = headerPage->lastPage;
-		status = bufMgr->readPage(filePtr, curPageNo, curPage);
+	newPage->init(newPageNo);
+	status = newPage->insertRecord(rec, rid);	
 
-		if (status != OK)
-			return status;
-
-		curPage->setNextPage(newPageNo);
-		unpinstatus = bufMgr->unPinPage(filePtr, curPageNo, true);
-
-		curPage = newPage;
-		curPageNo = newPageNo;
-		headerPage->lastPage = newPageNo;
-		hdrDirtyFlag = 1;
-		headerPage->recCnt += 1;
-		curDirtyFlag = 1;
-		curRec = rid;
+	if 	(status != OK) {
+		unpinstatus = bufMgr->unPinPage(filePtr, newPageNo, true);
 		return status;
 	}
 
+	Page* old;
+	curPageNo = headerPage->lastPage;
+	status2 = bufMgr->readPage(filePtr, headerPage->lastPage, old);
+	
+	if (status2 != OK)
+		return status2;
+	
+
+	if (status != OK)
+		return status;
+
+	old->setNextPage(newPageNo);
+	unpinstatus = bufMgr->unPinPage(filePtr, curPageNo, true);
+
+	curPage = newPage;
+	curPageNo = newPageNo;
+	headerPage->lastPage = newPageNo;
+	hdrDirtyFlag = 1;
+	headerPage->recCnt += 1;
+	curDirtyFlag = 1;
+	curRec = rid;
+	return status;
+
 	
   
-	return status; 
-	  
   
-  
-  
-  
-  
-  
-  
-  
-  
-}
-
+} 
 
