@@ -34,11 +34,10 @@ const Status createHeapFile(const string fileName)
 		
 	status = bufMgr->allocPage(file, newPageNo, newPage);
 	if (status != OK) { return status; }
-	newPage->init(0);
-	hdrPage->pageCnt = 0;
-	hdrPage->firstPage = hdrPage->pageCnt;
-	hdrPage->lastPage = hdrPage->pageCnt;
-	hdrPage->pageCnt += 1;
+	newPage->init(newPageNo);
+	hdrPage->firstPage = newPageNo;
+	hdrPage->lastPage = newPageNo;
+	hdrPage->pageCnt = 1;
 	
 	status = bufMgr->unPinPage(file, newPageNo, true);
 	status = bufMgr->unPinPage(file, hdrPageNo, true);
@@ -556,6 +555,8 @@ const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
 		headerPage->recCnt += 1;
 		curDirtyFlag = 1;
 		curRec = rid;
+		curPage = newPage;
+		curPageNo = newPageNo;
 		return status;
 	}
 
