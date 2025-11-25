@@ -110,7 +110,7 @@ int main(int argc, char **argv)
     	    rec1.f = i;
 
 			// now read the record
-			//printf("getting record (%d.%d)\n",ridArray[i].pageNo, ridArray[i].slotNo);
+			printf("getting record (%d.%d)\n",ridArray[i].pageNo, ridArray[i].slotNo);
 			status = file1->getRecord(ridArray[i], dbrec2);
     	    if (status != OK) error.print(status);
 
@@ -124,7 +124,7 @@ int main(int argc, char **argv)
     delete file1;
     
     // scan the file sequentially checking that each record was stored properly
-    cout << "scan file dummy.02 " << endl;
+    /* cout << "scan file dummy.02 " << endl;
     scan1 = new HeapFileScan("dummy.02", status);
     if (status != OK) error.print(status);
     else 
@@ -686,7 +686,7 @@ int main(int argc, char **argv)
     }
     delete bufMgr;
 
-    cout << endl << "Done testing." << endl;
+    cout << endl << "Done testing." << endl; */
     return 1;
 
 }

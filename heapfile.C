@@ -480,7 +480,7 @@ InsertFileScan::~InsertFileScan()
 }
 
 // Insert a record into the file
-const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
+ const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
 {
     Page*	newPage;
     int		newPageNo;
@@ -511,6 +511,7 @@ const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
 			headerPage->recCnt += 1;
 			curDirtyFlag = 1;
 			curRec = rid;
+			outRid = rid;
 
 			return status;
 		}
@@ -542,7 +543,7 @@ const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
 		
 		old->setNextPage(newPageNo);
 		headerPage->pageCnt += 1;
-		unpinstatus = bufMgr->unPinPage(filePtr, headerPage->lastPage, false);
+		unpinstatus = bufMgr->unPinPage(filePtr, headerPage->lastPage, true);
 
 		headerPage->lastPage = newPageNo;
 		hdrDirtyFlag = 1;
@@ -555,11 +556,109 @@ const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
 		}
 
 
-
 		headerPage->recCnt += 1;
 		curDirtyFlag = 1;
 		curRec = rid;
+		outRid = rid;
 		return status;
 	}
 
 
+
+/*const Status InsertFileScan::insertRecord(const Record &rec, RID &outRid)
+{
+    Page *newPage = nullptr;
+    int newPageNo;
+    Status status, unpinStatus;
+
+    // check for too-large record
+    if ((unsigned int)rec.length > PAGESIZE - DPFIXED)
+        return INVALIDRECLEN;
+
+    //---------------------------------------------------------
+    // 1. Load current page if NULL (start of scan)
+    //---------------------------------------------------------
+    if (curPage == NULL) {
+        curPageNo = headerPage->lastPage;             // always exists
+        status = bufMgr->readPage(filePtr, curPageNo, curPage);
+        if (status != OK) return status;
+    }
+
+    //---------------------------------------------------------
+    // 2. Try insert into *current* page
+    //---------------------------------------------------------
+    RID rid;
+    status = curPage->insertRecord(rec, rid);
+
+    if (status == OK) {
+        // inserted successfully
+        headerPage->recCnt++;
+        hdrDirtyFlag = 1;
+
+        curDirtyFlag = 1;
+        curRec = rid;
+        outRid = rid;
+
+        return OK;
+    }
+
+    //---------------------------------------------------------
+    // 3. Need a new page
+    //---------------------------------------------------------
+    // unpin OLD current page (not dirty — we did not modify it)
+    unpinStatus = bufMgr->unPinPage(filePtr, curPageNo, false);
+    curPage = NULL;
+
+    // allocate new page
+    status = bufMgr->allocPage(filePtr, newPageNo, newPage);
+    if (status != OK) {
+        // allocPage gives us a pinned page; must unpin on error
+        bufMgr->unPinPage(filePtr, newPageNo, true);
+        return status;
+    }
+
+    newPage->init(newPageNo);
+
+    //---------------------------------------------------------
+    // 4. Link it to the previous last page
+    //---------------------------------------------------------
+    // read old last page
+    Page *oldLast = nullptr;
+    status = bufMgr->readPage(filePtr, headerPage->lastPage, oldLast);
+    if (status != OK) {
+        bufMgr->unPinPage(filePtr, newPageNo, true);
+        return status;
+    }
+
+    oldLast->setNextPage(newPageNo);
+
+    // unpin old last page (dirty because its next pointer changed)
+    bufMgr->unPinPage(filePtr, headerPage->lastPage, true);
+
+    //---------------------------------------------------------
+    // 5. Update header
+    //---------------------------------------------------------
+    headerPage->pageCnt++;
+    headerPage->lastPage = newPageNo;
+    hdrDirtyFlag = 1;
+
+    //---------------------------------------------------------
+    // 6. Insert into the new page
+    //---------------------------------------------------------
+    status = newPage->insertRecord(rec, rid);
+    if (status != OK) {
+        // newPage is pinned; must unpin it on failure
+        bufMgr->unPinPage(filePtr, newPageNo, true);
+        return status;
+    }
+
+    // success
+    headerPage->recCnt++;
+    curPage = newPage;
+    curPageNo = newPageNo;
+    curDirtyFlag = 1;
+    curRec = rid;
+    outRid = rid;
+
+    return OK;
+} */
