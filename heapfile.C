@@ -31,13 +31,14 @@ const Status createHeapFile(const string fileName)
 	strncpy(hdrPage->fileName, fileName.c_str(), 49);
 	hdrPage->fileName[49] = '\0';
 	hdrPage->recCnt = 0;
-	hdrPage->pageCnt = 1;
 		
 	status = bufMgr->allocPage(file, newPageNo, newPage);
 	if (status != OK) { return status; }
-	newPage->init(newPageNo);
-	hdrPage->firstPage = newPageNo;
-	hdrPage->lastPage = newPageNo;
+	newPage->init(0);
+	hdrPage->pageCnt = 0;
+	hdrPage->firstPage = hdrPage->pageCnt;
+	hdrPage->lastPage = hdrPage->pageCnt;
+	hdrPage->pageCnt += 1;
 	
 	status = bufMgr->unPinPage(file, newPageNo, true);
 	status = bufMgr->unPinPage(file, hdrPageNo, true);
@@ -513,7 +514,6 @@ const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
 			curRec = rid;
 
 			unpinstatus = bufMgr->unPinPage(filePtr, curPageNo, true);
-			curPage = NULL;
 			return status;
 		}
 		
@@ -526,13 +526,16 @@ const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
 			return status;
 		}
 
-		newPage->init(newPageNo);
+		newPage->init(headerPage->pageCnt);
 
 		Page *old;
 		status2 = bufMgr->readPage(filePtr, headerPage->lastPage, old);
 		
-		if (status2 != OK)
+		if (status2 != OK) {
+			unpinstatus = bufMgr->unPinPage(filePtr, headerPage->lastPage, false);
+			unpinstatus = bufMgr->unPinPage(filePtr, newPageNo, true);
 			return status2;
+		}
 		
 		old->setNextPage(newPageNo);
 		headerPage->pageCnt += 1;
@@ -540,7 +543,7 @@ const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
 
 		headerPage->lastPage = newPageNo;
 		hdrDirtyFlag = 1;
-		status = curPage->insertRecord(rec, rid);	
+		status = newPage->insertRecord(rec, rid);	
 
 
 		if 	(status != OK) {
@@ -553,7 +556,6 @@ const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
 		headerPage->recCnt += 1;
 		curDirtyFlag = 1;
 		curRec = rid;
-		unpinstatus = bufMgr->unPinPage(filePtr, curPageNo, true);
 		return status;
 	}
 
