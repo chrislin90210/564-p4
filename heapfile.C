@@ -478,7 +478,9 @@ InsertFileScan::~InsertFileScan()
         if (status != OK) cerr << "error in unpin of data page\n";
     }
 }
-const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
+
+// Insert a record into the file
+ const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
 {
     Page*	newPage;
     int		newPageNo;
