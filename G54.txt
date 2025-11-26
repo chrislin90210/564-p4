@@ -1,0 +1,3 @@
+Benjamin Kang: Implemented createHeapFile, HeapFile constructor and helped with debugging
+Christopher Lin: Implemented insertRecord and debugged
+Sanjay Menon: Implemented getRecord and scanNext and debugged.
