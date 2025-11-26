@@ -78,6 +78,7 @@ HeapFile::HeapFile(const string & fileName, Status& returnStatus)
 	curPageNo = headerPage->firstPage;
 	curDirtyFlag = false;
 	curRec = NULLRID;
+    	returnStatus = status;
     }
     else
     {
