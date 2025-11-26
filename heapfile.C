@@ -41,6 +41,17 @@ const Status createHeapFile(const string fileName)
 	
 	status = bufMgr->unPinPage(file, newPageNo, true);
 	status = bufMgr->unPinPage(file, hdrPageNo, true);
+
+    status = bufMgr->flushFile(file);
+    if (status != OK) {
+        return status;
+    }
+
+    status = db.closeFile(file);
+    if (status != OK) {
+        return status;
+    }
+
 	return status;	
     }
     return (FILEEXISTS);
@@ -107,8 +118,8 @@ HeapFile::~HeapFile()
     status = bufMgr->unPinPage(filePtr, headerPageNo, hdrDirtyFlag);
     if (status != OK) cerr << "error in unpin of header page\n";
 	
-	// status = bufMgr->flushFile(filePtr);  // make sure all pages of the file are flushed to disk
-	// if (status != OK) cerr << "error in flushFile call\n";
+	status = bufMgr->flushFile(filePtr);
+	if (status != OK) cerr << "error in flushFile call\n";
 	// before close the file
 	status = db.closeFile(filePtr);
     if (status != OK)
@@ -479,7 +490,7 @@ InsertFileScan::~InsertFileScan()
     }
 }
 
-// Insert a record into the file
+// // Insert a record into the file
 const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
 {
     Page*	newPage;
@@ -495,13 +506,23 @@ const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
         return INVALIDRECLEN;
     }
 	
-	if (curPage == NULL) {
+	if (curPage == NULL || curPageNo != headerPage->lastPage) {
+
+        if (curPage != NULL) {
+            unpinstatus = bufMgr->unPinPage(filePtr, curPageNo, curDirtyFlag);
+            if (unpinstatus != OK) {
+                return unpinstatus;
+            }
+        }
+
 		curPageNo = headerPage->lastPage;
 
 		status = bufMgr->readPage(filePtr, curPageNo, curPage);
 		if (status != OK) {
 			return status;
 		}
+
+        curDirtyFlag = false;
 	}
 	
 		status = curPage->insertRecord(rec, rid);
@@ -511,11 +532,15 @@ const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
 			headerPage->recCnt += 1;
 			curDirtyFlag = 1;
 			curRec = rid;
+            outRid = rid;
 
 			return status;
 		}
 		
-		unpinstatus = bufMgr->unPinPage(filePtr, curPageNo, false);
+		unpinstatus = bufMgr->unPinPage(filePtr, curPageNo, curDirtyFlag);
+        if (unpinstatus != OK) {
+            return unpinstatus;
+        }
 		curPage = NULL;
 
 		//newPage
@@ -542,7 +567,7 @@ const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
 		
 		old->setNextPage(newPageNo);
 		headerPage->pageCnt += 1;
-		unpinstatus = bufMgr->unPinPage(filePtr, headerPage->lastPage, false);
+		unpinstatus = bufMgr->unPinPage(filePtr, headerPage->lastPage, true);
 
 		headerPage->lastPage = newPageNo;
 		hdrDirtyFlag = 1;
@@ -559,7 +584,6 @@ const Status InsertFileScan::insertRecord(const Record & rec, RID& outRid)
 		headerPage->recCnt += 1;
 		curDirtyFlag = 1;
 		curRec = rid;
+        outRid = rid;
 		return status;
-	}
-
-
+}
