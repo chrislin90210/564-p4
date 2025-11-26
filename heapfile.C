@@ -89,6 +89,7 @@ HeapFile::HeapFile(const string & fileName, Status& returnStatus)
 	curPageNo = headerPage->firstPage;
 	curDirtyFlag = false;
 	curRec = NULLRID;
+    returnStatus = status;
     }
     else
     {
@@ -118,8 +119,8 @@ HeapFile::~HeapFile()
     status = bufMgr->unPinPage(filePtr, headerPageNo, hdrDirtyFlag);
     if (status != OK) cerr << "error in unpin of header page\n";
 	
-	status = bufMgr->flushFile(filePtr);
-	if (status != OK) cerr << "error in flushFile call\n";
+	// status = bufMgr->flushFile(filePtr);
+	// if (status != OK) cerr << "error in flushFile call\n";
 	// before close the file
 	status = db.closeFile(filePtr);
     if (status != OK)
